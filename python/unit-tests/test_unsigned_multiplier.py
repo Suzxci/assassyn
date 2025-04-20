@@ -98,8 +98,8 @@ def check_raw(raw):
             assert int(a) * int(b) == int(c)
             
 
-def test_pipeline():
-    sys = SysBuilder('pipeline_test')
+def test_multiplier():
+    sys = SysBuilder('multiplier_test')
     
     with sys:
         
@@ -117,7 +117,7 @@ def test_pipeline():
         driver.build(mulstage1, mulstage2, mulstage3)
 
     print(sys)
-
+    
     config = assassyn.backend.config(
             verilog=utils.has_verilator(),
             sim_threshold=200,
@@ -134,4 +134,4 @@ def test_pipeline():
         check_raw(raw)
 
 if __name__ == '__main__':
-    test_pipeline()
+    test_multiplier()
