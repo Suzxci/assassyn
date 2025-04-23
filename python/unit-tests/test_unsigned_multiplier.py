@@ -116,15 +116,8 @@ def test_multiplier():
         driver = Driver()
         driver.build(mulstage1, mulstage2, mulstage3)
 
-    print(sys)
-    
-    config = assassyn.backend.config(
-            verilog=utils.has_verilator(),
-            sim_threshold=200,
-            idle_threshold=200,
-            random=True)
 
-    simulator_path, verilator_path = elaborate(sys, **config)
+    simulator_path, verilator_path = elaborate(sys, verilog=utils.has_verilator())
 
     raw = utils.run_simulator(simulator_path)
     check_raw(raw)
