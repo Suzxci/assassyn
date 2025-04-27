@@ -5,8 +5,9 @@ import assassyn
 import pytest
 import random
 
-#AIM: unsigned 32 bit multiplier: 32b*32b=64b
-#DATE: 2025/4/16
+
+# AIM: unsigned 32 bit multiplier: 32b*32b=64b
+# DATE: 2025/4/16
 
 # MulStage 1: multiply each bit of b
 class MulStage1(Module):
@@ -22,18 +23,27 @@ class MulStage1(Module):
     @module.combinational
     def build(self, stage1_reg: Array):
         a, b, cnt = self.pop_all_ports(True)
-        bit_num0 = cnt % Int(32)(32) #to avoid overflow
-        b_bit = (b>>bit_num0)&Int(32)(1) #to get the cnt-th bit from the right
-        b_bit = b_bit.bitcast(Int(1))
-        stage1_reg[0] = ((a * b_bit).bitcast(Int(32))).bitcast(Int(64)) #'a' multiply b[cnt-1]
-        log("MulStage1: {:?} * {:?} = {:?}", a, b_bit, a*b_bit)
+        log("{:?}",cnt)
+            
+        with Condition(cnt == Int(32)(31)):
+            b_bit= b >> Int(32)(31)  # to get the cnt-th bit from the right
+            stage1_reg[0] = a * b_bit  # 'a' multiply b[cnt-1]
+            log("MulStage1: {:?} * {:?} = {:?}", a, b_bit, a * b_bit)
+
+        with Condition(cnt < Int(32)(31)):# avoid overflow
+            b_bit= (b >> cnt) - ((b >> (cnt + Int(32)(1))) << Int(32)(1))  # to get the cnt-th bit from the right
+            stage1_reg[0] = a * b_bit  # 'a' multiply b[cnt-1]
+            log("MulStage1: {:?} * {:?} = {:?}", a, b_bit, a * b_bit)
+            
+        
+
 
 # MulStage 2: left shift to multiply weight
 class MulStage2(Module):
     def __init__(self):
         super().__init__(
             ports={
-                'cnt':Port(Int(32))
+                'cnt': Port(Int(32))
             }
         )
 
@@ -41,20 +51,22 @@ class MulStage2(Module):
     def build(self, stage1_reg: Array, stage2_reg: Array):
         cnt = self.pop_all_ports(True)
 
-        with Condition (cnt>Int(32)(0)):
-            bit_num = ((cnt - Int(32)(1)) % Int(32)(32)).bitcast(Int(64)) #avoid overflow
-            stage2_reg[0] = stage1_reg[0] << bit_num #left shift as multiplying weights
+        with Condition(cnt > Int(32)(0)):
+            
+            bit_num = cnt - Int(32)(1)   # avoid overflow
+            with Condition(bit_num < Int(32)(32)):
+                stage2_reg[0] = stage1_reg[0] << bit_num  # left shift as multiplying weights
+                log("MulStage2: {:?}", stage2_reg[0])
 
-        log("MulStage2: {:?}", stage2_reg[0])
 
 # Stage 3: add with the final result
 class MulStage3(Module):
     def __init__(self):
         super().__init__(ports={
-                'cnt':Port(Int(32)),
-                'a':Port(Int(32)),
-                'b':Port(Int(32))
-            }
+            'cnt': Port(Int(32)),
+            'a': Port(Int(32)),
+            'b': Port(Int(32))
+        }
         )
 
     @module.combinational
@@ -64,8 +76,8 @@ class MulStage3(Module):
         log("MulStage3: {:?}", stage3_reg[0])
         log("Temp result {:?} of {:?} * {:?} = {:?}", cnt, a, b, stage3_reg[0])
 
-        with Condition(cnt == Int(32)(34)): #output final result
-            log("Final result {:?} * {:?} = {:?}", a, b, stage3_reg[0])
+        with Condition(cnt == Int(32)(34)):  # output final result
+            log("Final result {} * {} = {}", a, b, stage3_reg[0])
 
 
 class Driver(Module):
@@ -73,19 +85,20 @@ class Driver(Module):
         super().__init__(ports={})
 
     @module.combinational
-    def build(self, mulstage1: MulStage1, mulstage2: MulStage2, mulstage3: MulStage3):    
+    def build(self, mulstage1: MulStage1, mulstage2: MulStage2, mulstage3: MulStage3):
         cnt = RegArray(Int(32), 1)
         cnt[0] = cnt[0] + Int(32)(1)
         cond = cnt[0] < Int(32)(35)
-        
-        #random test input
-        input_a = Int(32)(random.randint(0, 0xFFFFFFF)) #random input
+
+        # random test input
+        input_a = Int(32)(random.randint(0, 0xFFFFFFF))  # random input
         input_b = Int(32)(random.randint(0, 0xFFFFFFF))
-        
+
         with Condition(cond):
             mulstage1.async_called(a=input_a, b=input_b, cnt=cnt[0])
             mulstage2.async_called(cnt=cnt[0])
             mulstage3.async_called(cnt=cnt[0], a=input_a, b=input_b)
+
 
 def check_raw(raw):
     cnt = 0
@@ -96,13 +109,12 @@ def check_raw(raw):
             b = line_toks[-3]
             a = line_toks[-5]
             assert int(a) * int(b) == int(c)
-            
+
 
 def test_multiplier():
     sys = SysBuilder('multiplier_test')
-    
+
     with sys:
-        
         stage1_reg = RegArray(Int(64), 1)
         stage2_reg = RegArray(Int(64), 1)
         stage3_reg = RegArray(Int(64), 1)
@@ -116,6 +128,7 @@ def test_multiplier():
         driver = Driver()
         driver.build(mulstage1, mulstage2, mulstage3)
 
+    print(sys)
 
     simulator_path, verilator_path = elaborate(sys, verilog=utils.has_verilator())
 
@@ -124,7 +137,9 @@ def test_multiplier():
 
     if verilator_path:
         raw = utils.run_verilator(verilator_path)
+
         check_raw(raw)
+
 
 if __name__ == '__main__':
     test_multiplier()
