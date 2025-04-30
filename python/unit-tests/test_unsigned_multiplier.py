@@ -5,7 +5,6 @@ import assassyn
 import pytest
 import random
 
-
 # AIM: unsigned 32 bit multiplier: 32b*32b=64b
 # DATE: 2025/4/16
 
@@ -23,19 +22,11 @@ class MulStage1(Module):
     @module.combinational
     def build(self, stage1_reg: Array):
         a, b, cnt = self.pop_all_ports(True)
-        log("{:?}",cnt)
-            
-        with Condition(cnt == Int(32)(31)):
-            b_bit= b >> Int(32)(31)  # to get the cnt-th bit from the right
-            stage1_reg[0] = a * b_bit  # 'a' multiply b[cnt-1]
-            log("MulStage1: {:?} * {:?} = {:?}", a, b_bit, a * b_bit)
-
-        with Condition(cnt < Int(32)(31)):# avoid overflow
-            b_bit= (b >> cnt) - ((b >> (cnt + Int(32)(1))) << Int(32)(1))  # to get the cnt-th bit from the right
-            stage1_reg[0] = a * b_bit  # 'a' multiply b[cnt-1]
-            log("MulStage1: {:?} * {:?} = {:?}", a, b_bit, a * b_bit)
-            
         
+        with Condition(cnt < Int(32)(32)):# avoid overflow
+            b_bit = ((b >> cnt) & Int(32)(1)).bitcast(Int(32))  # to get the cnt-th bit from the right
+            stage1_reg[0] = a * b_bit  # 'a' multiply b[cnt-1]
+            log("MulStage1: {:?} * {:?} = {:?}", a, b_bit, a * b_bit)
 
 
 # MulStage 2: left shift to multiply weight
@@ -52,7 +43,6 @@ class MulStage2(Module):
         cnt = self.pop_all_ports(True)
 
         with Condition(cnt > Int(32)(0)):
-            
             bit_num = cnt - Int(32)(1)   # avoid overflow
             with Condition(bit_num < Int(32)(32)):
                 stage2_reg[0] = stage1_reg[0] << bit_num  # left shift as multiplying weights
@@ -77,7 +67,7 @@ class MulStage3(Module):
         log("Temp result {:?} of {:?} * {:?} = {:?}", cnt, a, b, stage3_reg[0])
 
         with Condition(cnt == Int(32)(34)):  # output final result
-            log("Final result {} * {} = {}", a, b, stage3_reg[0])
+            log("Final result {:?} * {:?} = {:?}", a, b, stage3_reg[0])
 
 
 class Driver(Module):
@@ -137,7 +127,6 @@ def test_multiplier():
 
     if verilator_path:
         raw = utils.run_verilator(verilator_path)
-
         check_raw(raw)
 
 
