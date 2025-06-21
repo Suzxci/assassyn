@@ -79,5 +79,6 @@ register_subcode!(
     WaitUntil(wait_until "wait_until"),
     Finish(finish "finish"),
     Assert(assert "assert"),
+    Barrier(barrier "barrier"),
   }
 );

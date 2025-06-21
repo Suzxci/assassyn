@@ -20,7 +20,7 @@ class Driver(Module):
 def check(raw):
     expected = 0
     for i in raw.split('\n'):
-        if '[driver]' in i:
+        if '[Driver]' in i or '[driver]' in i:
             assert int(i.split()[-1]) <= 50
             expected += 1
     assert expected == 50 or expected == 51, f'{expected} not in [50, 51]'

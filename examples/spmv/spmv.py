@@ -89,6 +89,7 @@ class SRAM_Master(Module):
         nzval_reg_addr = p + Int(32)(NZVAL_BASE)
         vec_reg_addr = cols_reg[0] + Int(32)(VEC_BASE)
         out_addr = p + Int(32)(OUT_BASE)
+        
 
         address_wire = (user_state[0] == SRAM_USER.WAIT).select( cols_reg_addr[0:ADDR_WIDTH-1].bitcast(Bits(ADDR_WIDTH)), address_wire)
         address_wire = (user_state[0] == SRAM_USER.M1).select( nzval_reg_addr[0:ADDR_WIDTH-1].bitcast(Bits(ADDR_WIDTH)), address_wire)

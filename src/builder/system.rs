@@ -514,6 +514,13 @@ impl SysBuilder {
   create_arith_op_impl!(unary, create_neg, subcode::Unary::Neg.into());
   create_arith_op_impl!(unary, create_flip, subcode::Unary::Flip.into());
 
+  pub fn create_binary_op(&mut self, a: BaseNode, b: BaseNode, opcode: Opcode) -> BaseNode {
+    match self.combine_types(opcode, &a, &b) {
+      Ok(res_ty) => self.create_expr(res_ty, opcode, vec![a, b], true),
+      Err(msg) => panic!("{}", msg),
+    }
+  }
+
   /// Get an empty bind for the given module.
   ///
   /// # Arguments

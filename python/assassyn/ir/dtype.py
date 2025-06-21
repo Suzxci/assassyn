@@ -1,13 +1,27 @@
 '''Data type module for assassyn frontend'''
 
+from .value import Value
+from .expr import concat
+
 #pylint: disable=too-few-public-methods,useless-parent-delegation,cyclic-import,unused-argument
 
 class DType:
     '''Base class for data type'''
 
+    _bits: int  # Number of bits in this data type
+
     def __init__(self, bits: int):
         '''The constructor, only records the bits'''
-        self.bits = bits
+        self._bits = bits
+
+    @property
+    def bits(self):
+        '''The number of bits in this data type'''
+        return self._bits
+
+    def __eq__(self, other):
+        '''Check if two data types are equal'''
+        return self.__class__ == other.__class__ and self.bits == other.bits
 
     def attributize(self, value, name):
         '''The syntax sugar for creating a port'''
@@ -15,6 +29,18 @@ class DType:
     def inrange(self, value):
         '''Check if the value is in the range of the data type'''
         return True
+
+    def is_int(self):
+        '''Check if this is an integer data type'''
+        return isinstance(self, (Int, UInt))
+
+    def is_raw(self):
+        '''Check if this is a raw bits data type'''
+        return isinstance(self, Bits)
+
+    def is_signed(self):
+        '''Check if this is a signed data type'''
+        return isinstance(self, Int)
 
 class Void(DType):
     '''Void data type'''
@@ -24,6 +50,26 @@ class Void(DType):
 
     def inrange(self, value):
         return False
+
+class ArrayType(DType):
+
+    '''Array data type'''
+
+    def __init__(self, dtype, size):
+        super().__init__(size * dtype.bits)
+        self._scalar_ty = dtype
+        self._size = size
+
+    @property
+    def size(self):
+        '''The number of elements in this array'''
+        return self._size
+
+    @property
+    def scalar_ty(self):
+        '''The data type of the elements in this array'''
+        return self._scalar_ty
+
 
 _VOID = Void()
 
@@ -99,10 +145,13 @@ class Bits(DType):
 class Record(DType):
     '''Record data type'''
 
+    fields: dict  # Dictionary mapping field names to (dtype, slice) tuples
+    readonly: bool  # Whether this record is readonly
+
     def __init__(self, *args, **kwargs):
         '''Instantiate a record type with fields in kwargs.
         NOTE: After Python-3.6, the order of fields is guaranteed to be the same as the order fed to
-        the argument. Thus, we can make the asumption that the order of feeding the arguments 
+        the argument. Thus, we can make the asumption that the order of feeding the arguments
         is from msb to lsb.
 
         Args:
@@ -209,6 +258,9 @@ class RecordValue:
     '''The value class for the record type. Remember, this is a right-value object, so each
     field of this record is immutable!'''
 
+    _payload: Value  # The underlying value of this record
+    _dtype: Record  # The record type of this value
+
     def __init__(self, dtype, *args, **kwargs):
 
         if args:
@@ -233,8 +285,6 @@ class RecordValue:
         assert not fields_set, f'Fields are not fully initialized, missing: {fields_set}'
         ordered_values.sort(key=lambda x: -x[0].start)
 
-        #pylint: disable=import-outside-toplevel
-        from .expr import concat
         payload = concat(*[v for _, v in ordered_values])
 
         self._payload = payload
@@ -250,6 +300,10 @@ class RecordValue:
 
     def __repr__(self):
         return f'RecordValue({self._dtype}, {self._payload})'
+
+    def __call__(self, value):
+        '''The syntax sugar for creating a record value'''
+        return Bits(self._dtype.bits)(value)
 
     # A Python TIP: __getattr__ is a "fallback" method, when "name" attribute is not found in the
     # self object. However, __getattribute__ is a "hook" method, which is called when every a.b

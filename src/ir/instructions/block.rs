@@ -31,6 +31,7 @@ impl Display for BlockIntrinsic<'_> {
         subcode::BlockIntrinsic::Cycled => "cycled",
         subcode::BlockIntrinsic::Finish => "halt",
         subcode::BlockIntrinsic::Assert => "assert",
+        subcode::BlockIntrinsic::Barrier => "barrier",
       },
       self
         .value()
@@ -39,6 +40,7 @@ impl Display for BlockIntrinsic<'_> {
         subcode::BlockIntrinsic::Value
         | subcode::BlockIntrinsic::WaitUntil
         | subcode::BlockIntrinsic::Finish
+        | subcode::BlockIntrinsic::Barrier
         | subcode::BlockIntrinsic::Assert => "",
         subcode::BlockIntrinsic::Condition | subcode::BlockIntrinsic::Cycled => "{",
       },

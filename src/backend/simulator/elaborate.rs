@@ -10,10 +10,7 @@ use proc_macro2::Span;
 use quote::quote;
 
 use crate::{
-  analysis::{
-    find_critical_path::{DependencyGraph, GraphVisitor},
-    topo_sort,
-  },
+  analysis::{find_critical_path::GraphVisitor, topo_sort},
   backend::common::{create_and_clean_dir, upstreams, Config},
   builder::system::{ModuleKind, SysBuilder},
   ir::{expr::subcode, instructions::PureIntrinsic, node::*, visitor::Visitor, *},
@@ -457,6 +454,9 @@ impl Visitor<String> for ElaborateModule<'_> {
           subcode::BlockIntrinsic::Finish => "std::process::exit(0);".to_string(),
           subcode::BlockIntrinsic::Assert => {
             format!("assert!({});", value)
+          }
+          subcode::BlockIntrinsic::Barrier => {
+            format!("/* Barrier: {} */", value)
           }
         }
       }

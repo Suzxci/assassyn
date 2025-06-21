@@ -4,12 +4,24 @@ import timeit
 import os
 import subprocess
 
+
 def identifierize(obj):
     '''The helper function to get the identifier of the given object. You can change `id_slice`
     to tune the length of the identifier. The default is slice(-5:-1).'''
     # pylint: disable=import-outside-toplevel
     from .builder import Singleton
     return hex(id(obj))[Singleton.id_slice]
+
+def unwrap_operand(node):
+    """Unwrap the operand from the node.
+
+    This is a helper function to get the operand from the node.
+    """
+    # pylint: disable=import-outside-toplevel
+    from .ir.expr import Operand
+    if isinstance(node, Operand):
+        return node.value
+    return node
 
 PATH_CACHE = None
 
@@ -28,16 +40,14 @@ def package_path():
 def _cmd_wrapper(cmd):
     return subprocess.check_output(cmd).decode('utf-8')
 
-
-def run_simulator(path, count_time=False):
+def run_simulator(manifest_path, offline=False, release=True):
     '''The helper function to run the simulator'''
-    cmd = ['cargo', 'build', '--manifest-path', path + '/Cargo.toml', '--release', '--offline']
-    _cmd_wrapper(cmd)
-    cmd = ['cargo', 'run', '--manifest-path', path + '/Cargo.toml', '--release', '--offline']
+    cmd = ['cargo', 'run', '--manifest-path', manifest_path]
+    if offline:
+        cmd += ['--offline']
+    if release:
+        cmd += ['--release']
     res = _cmd_wrapper(cmd)
-    if count_time:
-        a = timeit.timeit(lambda: _cmd_wrapper(cmd), number=5)
-        return (res, a)
     return res
 
 def run_verilator(path, count_time=False):
@@ -70,3 +80,15 @@ def has_verilator():
     if verilator_root and os.path.isdir(verilator_root):
         return 'verilator'
     return None
+
+def create_and_clean_dir(dir_path: str):
+    """Create a directory and clear its contents if it already exists."""
+    # Create the directory
+    os.makedirs(dir_path, exist_ok=True)
+
+def namify(name: str) -> str:
+    """Convert a name to a valid identifier.
+
+    This matches the Rust function in src/backend/simulator/utils.rs
+    """
+    return ''.join(c if c.isalnum() or c == '_' else '_' for c in name)

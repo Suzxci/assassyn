@@ -190,6 +190,10 @@ impl SysBuilder {
     self.create_block_intrinsic(DataType::void(), subcode::BlockIntrinsic::WaitUntil, cond)
   }
 
+  pub fn create_barrier(&mut self, node: BaseNode) -> BaseNode {
+    self.create_block_intrinsic(DataType::void(), subcode::BlockIntrinsic::Barrier, node)
+  }
+
   pub fn create_cycled_block(&mut self, cycle: u32) -> BaseNode {
     let block = self.create_block();
     let ip = self.get_current_ip();

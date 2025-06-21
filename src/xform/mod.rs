@@ -2,6 +2,7 @@ use crate::builder::system::SysBuilder;
 
 pub mod arbiter;
 pub mod array_partition;
+pub mod barrier_analysis;
 pub mod cse;
 pub mod erase_metadata;
 pub mod rewrite_wait_until;

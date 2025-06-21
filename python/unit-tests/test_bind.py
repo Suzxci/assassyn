@@ -1,7 +1,6 @@
 from assassyn.frontend import *
 from assassyn.backend import elaborate
 from assassyn import utils
-from assassyn.expr import Bind
 
 class Sub(Module):
 
@@ -39,7 +38,7 @@ class Rhs(Module):
         ) 
         
     @module.combinational
-    def build(self, sub: Bind):
+    def build(self, sub):
         rhs_b = self.pop_all_ports(True)
         call = sub.async_called(sub_b = rhs_b)
         call.bind.set_fifo_depth(sub_a = 1, sub_b = 1)

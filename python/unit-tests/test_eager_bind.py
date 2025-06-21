@@ -3,7 +3,6 @@ import struct
 from assassyn.frontend import *
 from assassyn.backend import elaborate
 from assassyn import utils
-from assassyn.expr import Bind
 
 class Sub(Module):
 
@@ -47,7 +46,7 @@ class Rhs(Module):
         )  
         
     @module.combinational
-    def build(self, sub: Bind):
+    def build(self, sub):
         b = self.pop_all_ports(True)
         bound = sub.bind(b = b)
         if bound.is_fully_bound():

@@ -1,14 +1,15 @@
 '''The module for intrinsic expressions'''
 #pylint: disable=cyclic-import
 
-from ..builder import ir_builder
+from ...builder import ir_builder
 from .expr import Expr
 
 INTRIN_INFO = {
     # Intrinsic operations opcode: (mnemonic, num of args, valued, side effect)
     900: ('wait_until', 1, False, True),
     901: ('finish', 0, False, True),
-    902: ('assert', 1, False, True)
+    902: ('assert', 1, False, True),
+    903: ('barrier', 1, False, True),
 }
 
 class Intrinsic(Expr):
@@ -17,13 +18,20 @@ class Intrinsic(Expr):
     WAIT_UNTIL = 900
     FINISH = 901
     ASSERT = 902
+    BARRIER = 903
+
+    opcode: int  # Operation code for this intrinsic
 
     def __init__(self, opcode, *args):
-        super().__init__(opcode)
+        super().__init__(opcode, args)
         _, num_args, _, _ = INTRIN_INFO[opcode]
         if num_args is not None:
             assert len(args) == num_args
-        self.args = args
+
+    @property
+    def args(self):
+        '''Get the arguments of this intrinsic.'''
+        return self._operands
 
     def __repr__(self):
         args = {", ".join(i.as_operand() for i in self.args[0:])}
@@ -66,3 +74,8 @@ def is_wait_until(expr):
 def finish():
     '''Finish the simulation.'''
     return Intrinsic(Intrinsic.FINISH)
+
+@ir_builder
+def barrier(node):
+    '''Barrier the current simulation state.'''
+    return Intrinsic(Intrinsic.BARRIER, node)

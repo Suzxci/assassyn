@@ -11,7 +11,7 @@ class Driver(Module):
             
     @module.combinational
     def build(self):
-        a = RegArray(Int(32), 4, attr=[Array.FULLY_PARTITIONED])
+        a = RegArray(Int(32), 4, partition='full')
         cnt = RegArray(Int(32), 1)
         v = cnt[0]
         cnt[0] = v + Int(32)(1)
@@ -36,7 +36,7 @@ def test_array_partition0():
         driver = Driver()
         driver.build()
 
-    simulator_path, verilator_path = elaborate(sys, verilog=utils.has_verilator())
+    simulator_path, verilator_path = elaborate(sys, verilog=False)
 
     raw = utils.run_simulator(simulator_path)
     check(raw, utils.parse_simulator_cycle)

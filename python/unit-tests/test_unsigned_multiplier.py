@@ -45,7 +45,8 @@ class MulStage2(Module):
         with Condition(cnt > Int(32)(0)):
             bit_num = cnt - Int(32)(1)   # avoid overflow
             with Condition(bit_num < Int(32)(32)):
-                stage2_reg[0] = stage1_reg[0] << bit_num  # left shift as multiplying weights
+                # left shift to multiply weight
+                stage2_reg[0] = (stage1_reg[0] << bit_num).bitcast(Int(64))
                 log("MulStage2: {:?}", stage2_reg[0])
 
 

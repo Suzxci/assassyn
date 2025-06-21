@@ -1,13 +1,19 @@
 '''The module AST implementation.'''
 
+from __future__ import annotations
+
+import typing
 from decorator import decorator
 
-from ..builder import Singleton, ir_builder
-from ..dtype import DType
+from ...builder import Singleton, ir_builder
 from ..block import Block
-from ..expr import Bind, FIFOPop, PureInstrinsic, FIFOPush, AsyncCall
+from ..expr import Bind, FIFOPop, PureIntrinsic, FIFOPush, AsyncCall, Expr
 from ..expr.intrinsic import wait_until
 from .base import ModuleBase
+
+if typing.TYPE_CHECKING:
+    from ..dtype import DType
+    from ..value import Value
 
 def _reserved_module_name(name):
     return name in ['Driver', 'Testbench']
@@ -15,8 +21,8 @@ def _reserved_module_name(name):
 #pylint: disable=too-few-public-methods
 class Timing:
     '''The enum class for the timing policy of a module.'''
-    SYSTOLIC = 1
-    BACKPRESSURE = 2
+    SYSTOLIC = 1  # Systolic timing policy
+    BACKPRESSURE = 2  # Backpressure timing policy
 
     @staticmethod
     def to_string(value):
@@ -25,6 +31,12 @@ class Timing:
 
 class Module(ModuleBase):
     '''The AST node for defining a module.'''
+
+    body: Block  # Body of the module
+    name: str  # Name of the module
+    _attrs: dict  # Dictionary of module attributes
+    _ports: list  # List of ports
+    _users: typing.List[Expr]  # Callers of this module
 
     ATTR_DISABLE_ARBITER = 1
     ATTR_TIMING = 2
@@ -63,10 +75,15 @@ class Module(ModuleBase):
             port.name = name
             port.module = self
             self._ports.append(getattr(self, name))
+        self._users = []
 
         assert Singleton.builder is not None, 'Cannot instantitate a module outside of a system!'
         Singleton.builder.modules.append(self)
 
+    @property
+    def users(self):
+        '''The helper function to get all the users of this module.'''
+        return self._users
 
     @property
     def ports(self):
@@ -116,11 +133,11 @@ class Module(ModuleBase):
 
         Singleton.repr_ident = 2
         body = self.body.__repr__()
-        return f'''  {attrs}
+        ext = self._dump_externals()
+        return f'''{ext}  {attrs}
   {var_id} = module {self.name} {ports}{{
 {body}
-  }}
-'''
+  }}'''
 
     @property
     def is_systolic(self):
@@ -148,20 +165,33 @@ class Module(ModuleBase):
 class Port:
     '''The AST node for defining a port in modules.'''
 
+    dtype: DType  # Data type of the port
+    name: str  # Name of the port
+    module: Module  # Module this port belongs to
+    _users: typing.List[Expr]  # Users of the port
+
     def __init__(self, dtype: DType):
+        #pylint: disable=import-outside-toplevel
+        from ..dtype import DType
         assert isinstance(dtype, DType)
         self.dtype = dtype
         self.name = self.module = None
+        self._users = []
+
+    @property
+    def users(self):
+        '''Get the users of the port.'''
+        return self._users
 
     @ir_builder
     def valid(self):
         '''The frontend API for creating a FIFO.valid operation.'''
-        return PureInstrinsic(PureInstrinsic.FIFO_VALID, self)
+        return PureIntrinsic(PureIntrinsic.FIFO_VALID, self)
 
     @ir_builder
     def peek(self):
         '''The frontend API for creating a FIFO.peek operation.'''
-        return PureInstrinsic(PureInstrinsic.FIFO_PEEK, self)
+        return PureIntrinsic(PureIntrinsic.FIFO_PEEK, self)
 
     @ir_builder
     def pop(self):

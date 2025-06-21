@@ -3,7 +3,6 @@ import pytest
 from assassyn.frontend import *
 from assassyn.backend import elaborate
 from assassyn import utils
-from assassyn.expr import Bind
 
 class Sub(Module):
     
@@ -43,7 +42,7 @@ class Driver(Module):
             super().__init__(ports={})
 
         @module.combinational
-        def build(self, rhs: Bind, lhs: Lhs):
+        def build(self, rhs, lhs: Lhs):
             cnt = RegArray(Int(32), 1)
             k = cnt[0]
             v = k + Int(32)(1)

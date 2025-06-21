@@ -11,7 +11,7 @@ use crate::{
   },
 };
 
-struct GatherBinds {
+pub struct GatherBinds {
   // Key: The module calleee.
   // Value: The binds to this module.
   binds: HashMap<BaseNode, HashSet<BaseNode>>,
@@ -36,7 +36,7 @@ fn bits_to_int(sys: &mut SysBuilder, x: &BaseNode) -> BaseNode {
   sys.create_bitcast(*x, DataType::int_ty(bits))
 }
 
-fn find_module_with_multi_callers(sys: &SysBuilder) -> HashMap<BaseNode, HashSet<BaseNode>> {
+pub fn find_module_with_multi_callers(sys: &SysBuilder) -> HashMap<BaseNode, HashSet<BaseNode>> {
   let mut gather_binds = GatherBinds {
     binds: HashMap::new(),
   };
@@ -45,6 +45,17 @@ fn find_module_with_multi_callers(sys: &SysBuilder) -> HashMap<BaseNode, HashSet
     gather_binds.visit_module(m);
   }
   gather_binds.binds.retain(|_, v| v.len() > 1);
+  gather_binds.binds
+}
+
+pub fn find_module_with_callers(sys: &SysBuilder) -> HashMap<BaseNode, HashSet<BaseNode>> {
+  let mut gather_binds = GatherBinds {
+    binds: HashMap::new(),
+  };
+  // Only FIFO port upstream modules are considered to be arbitrated.
+  for m in sys.module_iter(ModuleKind::Module) {
+    gather_binds.visit_module(m);
+  }
   gather_binds.binds
 }
 
