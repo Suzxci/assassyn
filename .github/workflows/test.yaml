@@ -8,9 +8,6 @@ on:
 
 name: Test
 
-env:
-  VERILATOR_VERSION: v5.026
-
 jobs:
   test:
     name: Test
@@ -18,14 +15,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build Container
-        run: docker build -t assassyn-dev .
+        run: docker build -t assassyn:latest .
+      - name: Stop & Remove Existing Container
+        run: |
+          docker stop assassyn || true
+          docker container rm assassyn || true
+      - name: Initialize the Container
+        run: |
+          docker run -v ${{ github.workspace }}:/app --user $(id -u):$(id -g) assassyn:latest ./init.sh
+      - name: Run Python Lint
+        run:
+          docker run -v ${{ github.workspace }}:/app --user $(id -u):$(id -g) assassyn:latest pylint --rcfile python/.pylintrc python/assassyn
       - name: Python Frontend Unit Tests
         run: |
-          docker run --rm -v ${{ github.workspace }}:/app --user $(id -u):$(id -g) assassyn-dev bash -c "
-            pytest -n 8 python/unit-tests;
-            python3 examples/systolic-array/systolic_array.py;
-            python3 examples/systolic-array/memory_systolic_array.py;
-            python3 examples/minor-cpu/src/main.py;
-            python3 examples/minor-cpu/src/br_pre_main.py;
-            python3 examples/priority-queue/main.py;
-          "
+          docker run -v ${{ github.workspace }}:/app --user $(id -u):$(id -g) assassyn:latest pytest -n 8 python/unit-tests
+      - name: Cleanup Containers
+        run: |
+          docker rm -f $(docker ps -a --filter ancestor=assassyn:latest -q) 2>/dev/null || true

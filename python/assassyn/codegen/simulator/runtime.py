@@ -109,7 +109,9 @@ impl <T: Sized> FIFO<T> {
 
   pub fn tick(&mut self, cycle: usize) {
     if let Some(_) = self.pop.pop(cycle) {
-      self.payload.pop_front().unwrap();
+      if !self.payload.is_empty() {
+        self.payload.pop_front().unwrap();
+      }
     }
     if let Some(event) = self.push.pop(cycle) {
       self.payload.push_back(event.data);
@@ -164,7 +166,7 @@ impl <T: Sized + Cycled>XEQ<T> {
   }
 
   pub fn pop(&mut self, current: usize) -> Option<T> {
-    if self.q.first_key_value().map_or(false, |(cycle, _)| *cycle >= current) {
+    if self.q.first_key_value().map_or(false, |(cycle, _)| *cycle <= current) {
       self.q.pop_first().map(|(_, event)| event)
     } else {
       None
